@@ -1,0 +1,59 @@
+library(tidyverse)
+library(cowplot)
+library(ggpubr)
+
+mtcars$trans <- ifelse(mtcars$am == 0,"auto", "manual")
+
+ggplot(data = mtcars, mapping = aes(x = trans, y = mpg))+
+        geom_boxplot(aes(fill = am))+ theme(legend.position = "none")+
+        xlab("Transmission")+ ggtitle("Fig 1. MPG Comparison between Transmissions")
+
+#Quick linear model
+fit <- lm(mpg ~ am, mtcars)
+summary(fit)
+
+fit$coefficients[1]
+
+sum(fit$coefficients)
+
+#Include more variables to increase R-sq
+
+aov <- aov(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtcars)
+summary(aov)
+
+fit2 <- lm(mpg ~ am + cyl + disp + wt, mtcars)
+summary(fit2)
+
+#Fit2 is probably overfitted
+
+fit3 <- lm(mpg ~ cyl+wt, mtcars)
+summary(fit3)
+
+#Compare models
+
+anova(fit, fit3, fit2)
+
+#RSS drops significantly with fit3, but barely for fit2
+#Fit2 does not have a significant change as seen by the high Pr(>F)
+#We reject model2 and stick with fit3
+
+AIC(fit, fit2, fit3) 
+
+#Plot out model (residuals diagnostics) i.e. plot(fit)
+
+par(mfrow = c(2,2))
+plot(fit3, caption = c("Fig 2. Residuals vs. FItted",
+                       "Fig 3. Normal Q - Q",
+                       "Fig 4. Scale-Location",
+                       " ", "Fig 5. Residuals vs. Leverage"))
+
+
+#Test shapiro
+
+shapiro.test(fit3$residuals)
+
+#Residuals are normaly distributed
+
+ggqqplot(fit3$residuals, title = "Fig 3. QQ Plot showing Normality")
+
+#Cylinders and Weight are the better variables to estimate mpg
