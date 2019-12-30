@@ -1,0 +1,104 @@
+---
+title: "Regressions Final"
+author: "JRP"
+date: "12/30/2019"
+output:
+  html_document:
+    df_print: paged
+  pdf_document: default
+  word_document: default
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(echo = TRUE)
+library(tidyverse)
+library(cowplot)
+library(ggpubr)
+```
+
+# Regression Models
+
+## EXECUTIVE SUMMARY
+
+In this quick analysis we will explore the relationship between a set of available variables to determine how to maximize miles per gallon fuel efficiency (MPG) based on the mtcars dataset. We will achieve this through a series of models that will help us determine the most effective way of predicting MPG, including the effects of having a manual or automatic transmission.
+
+## AUTO / MANUAL ANALYSIS
+
+The first question we seek to answer is whether an automatic or a manual transmission has better MPG. We can do this with a simple chart as observed in Fig 1 in the appendix. Based on the graph we can observe that manual transmissions have a clearly higher MPG. We can quantify this further with a quick linear model.
+
+```{r a, echo = FALSE}
+mtcars$trans <- ifelse(mtcars$am == 0,"auto", "manual")
+fit <- lm(mpg ~ am, mtcars)
+summary(fit)
+fit$coefficients[1]
+
+sum(fit$coefficients)
+
+```
+
+Based on our coefficients we can see that an automatic transmission has a mean predicted value of 17.15 MPG whereas a manual transmission has an estimate of 24.39 MPG. This can be observed in Fig 1 as well.
+
+However, we get a low R-squared of 0.36. Even though "am" is statistically significant at p= 0.001 we can use the other variables to see if we get a better model to predict MPG.
+
+## MODEL ANALYSIS
+
+As shown in the first table in  the appendix, running a linear model including all other variables (aov) we can see that "cyl", "disp", and "wt" are the only statistically significant variables, with "am" failing even at p = 0.1. We next create a model that uses these variables, plus we'll retain "am" for now.
+
+```{r b, echo = TRUE}
+fit2 <- lm(mpg ~ am + cyl + disp + wt, mtcars)
+
+```
+
+Model 2's R-squared increases to 0.83, but it is likely overfitted and "am" is still not significant, nor is "disp". We try a final model and compare the results of all three.
+
+```{r c, echo = TRUE}
+fit3 <- lm(mpg ~ cyl+wt, mtcars)
+```
+
+The third model (fit3) that includes "cyl" and "wt" still has a rounded R-squared of 0.83, meaning we have lost very little explaining power by removing the other variables.
+
+When we compare all three models in anova, we see that fit3 (mpg ~ cyl + wt) shows the greatest improvement and also has the lowest AIC, making it the best model.
+
+Lastly, we do some graphical analysis in Fig 2- Fig 5, that shows a good distribution of residuals to fitted values, plus a normal distribution that we further confirm in the Shapiro-Wilk normality test.
+
+We can also see in the expanded QQ plot in Fig 6 that the values remain within the confidence bands.
+
+# APPENDIX
+
+```{r d, echo = TRUE}
+
+#Model Comparison and Statistical Tests
+
+aov <- aov(mpg ~ cyl+disp+hp+drat+wt+qsec+vs+am+gear+carb, mtcars)
+summary(aov)
+
+fit2 <- lm(mpg ~ am + cyl + disp + wt, mtcars)
+summary(fit2)
+
+fit3 <- lm(mpg ~ cyl+wt, mtcars)
+summary(fit3)
+
+anova(fit, fit3, fit2)
+
+AIC(fit, fit2, fit3)
+
+shapiro.test(fit3$residuals)
+```
+
+```{r pressure, echo=FALSE}
+
+ggplot(data = mtcars, mapping = aes(x = trans, y = mpg))+
+        geom_boxplot(aes(fill = am))+ theme(legend.position = "none")+
+        xlab("Transmission")+ ggtitle("Fig 1. MPG Comparison between Transmissions")
+
+par(mfrow = c(2,2))
+plot(fit3, caption = c("Fig 2. Residuals vs. FItted",
+                       "Fig 3. Normal Q - Q",
+                       "Fig 4. Scale-Location",
+                       " ", "Fig 5. Residuals vs. Leverage"))
+
+ggqqplot(fit3$residuals, title = "Fig 6. QQ Plot showing Normality")
+
+```
+
+
